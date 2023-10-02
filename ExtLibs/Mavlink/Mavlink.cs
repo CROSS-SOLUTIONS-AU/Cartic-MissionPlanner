@@ -3382,10 +3382,9 @@ public partial class MAVLink
         INFO=6, 
         ///<summary> Useful non-operational messages that can assist in debugging. These should not occur during normal operation. | </summary>
         [Description("Useful non-operational messages that can assist in debugging. These should not occur during normal operation.")]
-        DEBUG=7, 
-        
-    };
-    
+        DEBUG=7,
+        MAV_SEVERITY_INFO = 8,
+    }
     ///<summary> Power supply status flags (bitmask) </summary>
     [Flags]
 	public enum MAV_POWER_STATUS: ushort

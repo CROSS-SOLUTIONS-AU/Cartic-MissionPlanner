@@ -640,7 +640,7 @@
     </PackageReference>
     <PackageReference Include="SharpDX" version="4.1.0" targetFramework="net462" />
     <PackageReference Include="SharpDX.DirectInput" version="4.1.0" targetFramework="net462" />
-    <PackageReference Include="SkiaSharp" Version="2.80.2" />
+    <PackageReference Include="SkiaSharp" Version="2.80.3" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies">
       <Version>2.80.3</Version>
     </PackageReference>
@@ -969,9 +969,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>UserControl</SubType>
     </None>
-    <None Include="plugins\example.cs">
+    <Compile Include="plugins\boatControlsPlugin.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Compile>
     <None Include="plugins\example2.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
