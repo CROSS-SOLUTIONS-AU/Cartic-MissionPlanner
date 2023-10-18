@@ -30,6 +30,7 @@ namespace cartic
             }
         }
         private Control recButton = new MissionPlanner.Controls.MyButton();
+        private Control depthLabel = new MissionPlanner.Controls.MyLabel();
         public override string Name
         {
             get { return "Cartic Boat Controls"; }
@@ -50,6 +51,11 @@ namespace cartic
             MainV2.comPort.OnPacketReceived += ComPort_RecieveState;
             Host.FDMenuHud.BeginInvokeIfRequired(() =>
             {
+                depthLabel.Text = "0.0";
+                depthLabel.Padding = new Padding(10);
+                depthLabel.Top = 5;
+                depthLabel.Left = 10;
+
                 recButton.Text = "Start Recording Soundings";
                 recButton.Padding = new Padding (10);
                 recButton.Left = 10;
@@ -98,7 +104,7 @@ namespace cartic
                 {
                     mav.send_text((byte)MAV_SEVERITY.INFO,"RcrdDepth:1");
                 });
-                recButton.Text = "End Recording";
+                recButton.Text = "Trying to Start Recording...";
             }
             else
             {
@@ -142,9 +148,10 @@ namespace cartic
                 {
                     var depth = (MAVLink.mavlink_rangefinder_t)e.data;
                     Console.WriteLine("Depth: " + depth.ToString());
+                    depthLabel.Text = depth.distance.ToString();
+                    recButton.Text = (depth.voltage == 1) ? "End Recording" : "Start Recording Soundings";
+                    Recording = (depth.voltage == 1) ? true : false;
                 }
-
-
             }
         }
     }
