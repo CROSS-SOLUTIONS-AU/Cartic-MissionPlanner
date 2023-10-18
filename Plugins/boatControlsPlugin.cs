@@ -55,7 +55,7 @@ namespace cartic
                 recButton.Left = 10;
                 recButton.Top = 20;
                 recButton.Size = new System.Drawing.Size(100, 50);
-                recButton.MouseClick += RecordingButtonClick;
+                recButton.Click += RecordingButtonClick;
                 FlightData.instance.tabActionsSimple.Controls.Add(recButton);
 
             });
@@ -64,28 +64,15 @@ namespace cartic
 
         public override bool Loaded()
         {
-            loopratehz = 0.5f;
+            loopratehz = 1.0f;
             
+
             return true;
         }
 
 
         public override bool Loop()
         {
-            if (Recording)
-            {
-                Console.WriteLine("Recording: " + Recording.ToString());
-                recButton.Text = "End Recording";
-                string recordingState = "RcrdDpth:1";
-                SendMessage(recordingState);
-            }
-            else
-            {
-                Console.WriteLine("Recording: " + Recording.ToString());
-                recButton.Text = "Start Recording Soundings";
-                string recordingState = "RcrdDpth:0";
-                SendMessage(recordingState);
-            }
             return true;
         }
 
@@ -103,14 +90,22 @@ namespace cartic
                 Console.WriteLine($"Mouse button clicked: {mouseEvent.Button}");
             }
 
-            Recording = !Recording; // Toggle the recording state
+            Recording = !_recording; // Toggle the recording state
 
             if (Recording)
             {
+                Parallel.ForEach(MainV2.Comports, mav =>
+                {
+                    mav.send_text((byte)MAV_SEVERITY.INFO,"RcrdDepth:1");
+                });
                 recButton.Text = "End Recording";
             }
             else
             {
+                Parallel.ForEach(MainV2.Comports, mav =>
+                {
+                    mav.send_text((byte)MAV_SEVERITY.INFO, "RcrdDepth:0");
+                });
                 recButton.Text = "Start Recording Soundings";
             }
         }
@@ -139,14 +134,18 @@ namespace cartic
         }
 
         public void ComPort_RecieveState(object sender, MAVLink.MAVLinkMessage e)
-        {/*
+        {
             if(e.msgid == (uint)MAVLink.MAVLINK_MSG_ID.RANGEFINDER)
             {
-                var depth = (MAVLink.mavlink_rangefinder_t)e.data;
-                recording = true;
-                Console.WriteLine("Depth: " + depth.ToString());
+                Console.WriteLine("Rangefinder Recieved Compid " + e.compid);
+                if (e.compid == 2)
+                {
+                    var depth = (MAVLink.mavlink_rangefinder_t)e.data;
+                    Console.WriteLine("Depth: " + depth.ToString());
+                }
+
+
             }
-            */
         }
     }
 }
