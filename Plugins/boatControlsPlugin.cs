@@ -55,14 +55,17 @@ namespace cartic
                 depthLabel.Padding = new Padding(10);
                 depthLabel.Top = 5;
                 depthLabel.Left = 10;
+                depthLabel.Size = new System.Drawing.Size(100, 30);
+                depthLabel.Font = new System.Drawing.Font("Arial", 16);
 
                 recButton.Text = "Start Recording Soundings";
                 recButton.Padding = new Padding (10);
                 recButton.Left = 10;
-                recButton.Top = 20;
+                recButton.Top = 40;
                 recButton.Size = new System.Drawing.Size(100, 50);
                 recButton.Click += RecordingButtonClick;
                 FlightData.instance.tabActionsSimple.Controls.Add(recButton);
+                FlightData.instance.tabActionsSimple.Controls.Add(depthLabel);
 
             });
             return true;
