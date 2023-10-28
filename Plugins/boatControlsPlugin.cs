@@ -16,6 +16,7 @@ using System.Speech.Synthesis;
 using System.Security.Cryptography.X509Certificates;
 using Accord.Math;
 using System.ComponentModel;
+using Org.BouncyCastle.Asn1.Crmf;
 //loadassembly: MissionPlanner.WebAPIs
 
 namespace cartic
@@ -79,11 +80,8 @@ namespace cartic
             get { return depthOffset; }
             set
             {
-                if (depthOffset != value)
-                {
-                    depthOffset = value;
-                    OnPropertyChanged("DepthOffset");
-                }
+                depthOffset = value;
+                OnPropertyChanged("DepthOffset");
             }
         }
 
@@ -125,6 +123,16 @@ namespace cartic
                 }
             }
         }
+        public string PingsPerSecondString
+        {
+            get
+            {
+                if(PingsPerSecond == null) {
+                    return "";
+                }
+                return string.Join(", ", PingsPerSecond);
+            }
+        }
 
         public List<int> PulsesPerSecond
         {
@@ -136,6 +144,19 @@ namespace cartic
                     pingsPerSecond = value;
                     OnPropertyChanged("PulsesPerSecond");
                 }
+            }
+        }
+
+        // This is the new property that returns the list as a formatted string
+        public string PulsesPerSecondString
+        {
+            get
+            {
+                if (PulsesPerSecond == null)
+                {
+                    return "";
+                }
+                return string.Join(", ", PulsesPerSecond);
             }
         }
 
@@ -193,12 +214,25 @@ namespace cartic
         private BathyLogger fileLogger = null;
         private SonarSettings sonarSettings = new SonarSettings();
 
+        private TableLayoutPanel sonarParamLayout = new System.Windows.Forms.TableLayoutPanel();
+
         private Control recButton = new MissionPlanner.Controls.MyButton();
         private Control showLogsButton = new MissionPlanner.Controls.MyButton();
         private Control depthLabel = new MissionPlanner.Controls.MyLabel();
         private Control recStateLabel = new MissionPlanner.Controls.MyLabel();
         private Control depthRxLabel = new MissionPlanner.Controls.MyLabel();
 
+        //Value Labels
+        private Control depthOffsetVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control rangeVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control pingVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control pingsPerSecondVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control pulsesPerSecondVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control depthFilterVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control sampleFilterVLabel = new MissionPlanner.Controls.MyLabel();
+        private Control depthBlankVLabel = new MissionPlanner.Controls.MyLabel();
+
+        //Labels
         private Control depthOffsetLabel = new MissionPlanner.Controls.MyLabel();
         private Control rangeLabel = new MissionPlanner.Controls.MyLabel();
         private Control pingLabel = new MissionPlanner.Controls.MyLabel();
@@ -285,7 +319,7 @@ namespace cartic
                 recStateLabel.Font = new System.Drawing.Font("Arial", 36);
 
                 recButton.Text = "Start Recording Soundings";
-                recButton.Padding = new Padding (10);
+                recButton.Padding = new Padding(10);
                 recButton.Left = 10;
                 recButton.Top = 70;
                 recButton.Size = new System.Drawing.Size(110, 60);
@@ -325,115 +359,150 @@ namespace cartic
                     FlightData.instance.tabActionsSimple.Controls.Remove(btn3[0]);
                 }
 
+                sonarParamLayout.Name = "sonarParamLayout";
+                sonarParamLayout.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
+                sonarParamLayout.Size = new System.Drawing.Size (220, 280);
+                sonarParamLayout.SuspendLayout();
 
+                int numberOfColumns = 3; // For example, set it to 4 columns. Adjust as needed.
+
+                // Set the number of columns for your TableLayoutPanel
+                sonarParamLayout.ColumnCount = numberOfColumns;
+
+                for (int i = 0; i < numberOfColumns; i++)
+                {
+                    if (i == 0) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F)); }
+                    if (i == 1) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F)); }
+                    if (i == 2) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F)); }
+                }
+
+                int numberOfRows = 8; // For example, set it to 4 columns. Adjust as needed.
+                // Set the number of columns for your TableLayoutPanel
+                sonarParamLayout.RowCount = numberOfRows;
+
+                for (int i = 0; i < numberOfRows; i++)
+                {
+                    sonarParamLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 12.5F));
+                }
 
                 // Create and configure the container panel
                 Panel borderContainer = new Panel();
                 borderContainer.BorderStyle = BorderStyle.FixedSingle;
                 borderContainer.Top = 5;
                 borderContainer.Left = 140;
-                borderContainer.Size = new System.Drawing.Size(140, 200); // Change size as required
+                borderContainer.Size = new System.Drawing.Size(220, 280); // Change size as required
                 FlightData.instance.tabActionsSimple.Controls.Add(borderContainer);
-
+                borderContainer.Controls.Add(sonarParamLayout);
+                
                 // Add labels to the container and format them
-                int topPosition = 5;
-                int increment = 20; // Adjust as needed to space the labels correctly
 
                 // Depth Offset Label
-                depthOffsetLabel.Text = "Depth Offset: --";
-                depthOffsetLabel.Padding = new Padding(10);
-                depthOffsetLabel.Top = topPosition;
-                depthOffsetLabel.Left = 5;
-                depthOffsetLabel.Anchor = AnchorStyles.Left;
-                depthOffsetLabel.Size = new System.Drawing.Size(90, 30);
+                depthOffsetLabel.Text = "Depth Offset: ";
+                depthOffsetLabel.Size = new System.Drawing.Size(90, 16);
                 depthOffsetLabel.Font = new System.Drawing.Font("Arial", 10);
-                depthOffsetLabel.DataBindings.Add("Text", sonarSettings, "DepthOffset");
-                borderContainer.Controls.Add(depthOffsetLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(depthOffsetLabel, 0, 0);
 
                 // Range Label
-                rangeLabel.Text = "Range: --";
-                rangeLabel.Padding = new Padding(10);
-                rangeLabel.Top = topPosition;
-                rangeLabel.Left = 5;
-                rangeLabel.Anchor = AnchorStyles.Left;
-                rangeLabel.Size = new System.Drawing.Size(90, 30);
+                rangeLabel.Text = "Range: ";
+                rangeLabel.Size = new System.Drawing.Size(90, 16);
                 rangeLabel.Font = new System.Drawing.Font("Arial", 10);
-                rangeLabel.DataBindings.Add("Text", sonarSettings, "Range");
-                borderContainer.Controls.Add(rangeLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(rangeLabel, 0, 1);
 
                 // Ping Label
-                pingLabel.Text = "Ping: --";
-                pingLabel.Padding = new Padding(10);
-                pingLabel.Top = topPosition;
-                pingLabel.Left = 5;
-                pingLabel.Anchor = AnchorStyles.Left;
-                pingLabel.Size = new System.Drawing.Size(90, 30);
+                pingLabel.Text = "Ping: ";
+                pingLabel.Size = new System.Drawing.Size(90, 16);
                 pingLabel.Font = new System.Drawing.Font("Arial", 10);
-                pingLabel.DataBindings.Add("Text", sonarSettings, "Ping");
-                borderContainer.Controls.Add(pingLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(pingLabel, 0, 2);
 
                 // Pings Per Second Label
-                pingsPerSecondLabel.Text = "Pings/Sec: --";
-                pingsPerSecondLabel.Padding = new Padding(10);
-                pingsPerSecondLabel.Top = topPosition;
-                pingsPerSecondLabel.Left = 5;
-                pingsPerSecondLabel.Anchor = AnchorStyles.Left;
-                pingsPerSecondLabel.Size = new System.Drawing.Size(90, 30);
+                pingsPerSecondLabel.Text = "Pings/Sec: ";
+                pingsPerSecondLabel.Size = new System.Drawing.Size(90, 16);
                 pingsPerSecondLabel.Font = new System.Drawing.Font("Arial", 10);
-                pingsPerSecondLabel.DataBindings.Add("Text", sonarSettings, "PingsPerSecond");
-                borderContainer.Controls.Add(pingsPerSecondLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(pingsPerSecondLabel, 0, 3);
 
                 // Pulses Per Second Label
-                pulsesPerSecondLabel.Text = "Pulses/Sec: --";
-                pulsesPerSecondLabel.Padding = new Padding(10);
-                pulsesPerSecondLabel.Top = topPosition;
-                pulsesPerSecondLabel.Left = 5;
-                pulsesPerSecondLabel.Anchor = AnchorStyles.Left;
-                pulsesPerSecondLabel.Size = new System.Drawing.Size(90, 30);
+                pulsesPerSecondLabel.Text = "Pulses/Sec: ";
+                pulsesPerSecondLabel.Size = new System.Drawing.Size(90, 16);
                 pulsesPerSecondLabel.Font = new System.Drawing.Font("Arial", 10);
-                pulsesPerSecondLabel.DataBindings.Add("Text", sonarSettings, "PulsesPerSecond");
-                borderContainer.Controls.Add(pulsesPerSecondLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(pulsesPerSecondLabel, 0, 4);
 
                 // Depth Filter Label
-                depthFilterLabel.Text = "Depth Filter: --";
-                depthFilterLabel.Padding = new Padding(10);
-                depthFilterLabel.Top = topPosition;
-                depthFilterLabel.Left = 5;
-                depthFilterLabel.Anchor = AnchorStyles.Left;
-                depthFilterLabel.Size = new System.Drawing.Size(90, 30);
+                depthFilterLabel.Text = "Depth Filter: ";
+                depthFilterLabel.Size = new System.Drawing.Size(90, 16);
                 depthFilterLabel.Font = new System.Drawing.Font("Arial", 10);
-                depthFilterLabel.DataBindings.Add("Text", sonarSettings, "DepthFilter");
-                borderContainer.Controls.Add(depthFilterLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(depthFilterLabel, 0, 5);
 
                 // Sample Filter Label
-                sampleFilterLabel.Text = "Sample Filter: --";
-                sampleFilterLabel.Padding = new Padding(10);
-                sampleFilterLabel.Top = topPosition;
-                sampleFilterLabel.Left = 5;
-                sampleFilterLabel.Anchor = AnchorStyles.Left;
-                sampleFilterLabel.Size = new System.Drawing.Size(90, 30);
+                sampleFilterLabel.Text = "Sample Filter: ";
+                sampleFilterLabel.Size = new System.Drawing.Size(90, 16);
                 sampleFilterLabel.Font = new System.Drawing.Font("Arial", 10);
-                sampleFilterLabel.DataBindings.Add("Text", sonarSettings, "SampleFilter");
-                borderContainer.Controls.Add(sampleFilterLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(sampleFilterLabel, 0, 6);
 
                 // Depth Blank Label
-                depthBlankLabel.Text = "Depth Blank: --";
-                depthBlankLabel.Padding = new Padding(10);
-                depthBlankLabel.Top = topPosition;
-                depthBlankLabel.Left = 5;
-                depthBlankLabel.Anchor = AnchorStyles.Left;
-                depthBlankLabel.Size = new System.Drawing.Size(90, 30);
+                depthBlankLabel.Text = "Depth Blank: ";
+                depthBlankLabel.Size = new System.Drawing.Size(90, 16);
                 depthBlankLabel.Font = new System.Drawing.Font("Arial", 10);
-                depthBlankLabel.DataBindings.Add("Text", sonarSettings, "DepthBlank");
-                borderContainer.Controls.Add(depthBlankLabel);
-                topPosition += increment;
+                sonarParamLayout.Controls.Add(depthBlankLabel, 0, 7);
+
+                /////////// VALUE LABELS
+
+                // Depth Offset Label
+                depthOffsetVLabel.Text = "Depth Offset: --";
+                depthOffsetLabel.Size = new System.Drawing.Size(90, 16);
+                depthOffsetVLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthOffsetVLabel.DataBindings.Add("Text", sonarSettings, "DepthOffset");
+                sonarParamLayout.Controls.Add(depthOffsetVLabel, 1, 0);
+
+                // Range VLabel
+                rangeVLabel.Text = "Range: --";
+                rangeVLabel.Size = new System.Drawing.Size(90, 16);
+                rangeVLabel.Font = new System.Drawing.Font("Arial", 10);
+                rangeVLabel.DataBindings.Add("Text", sonarSettings, "Range");
+                sonarParamLayout.Controls.Add(rangeVLabel, 1, 1);
+
+                // Ping VLabel
+                pingVLabel.Text = "Ping: --";
+                pingVLabel.Size = new System.Drawing.Size(90, 16);
+                pingVLabel.Font = new System.Drawing.Font("Arial", 10);
+                pingVLabel.DataBindings.Add("Text", sonarSettings, "Ping");
+                sonarParamLayout.Controls.Add(pingVLabel, 1, 2);
+
+                // Pings Per Second VLabel
+                pingsPerSecondVLabel.Text = "Pings/Sec: --";
+                pingsPerSecondVLabel.Size = new System.Drawing.Size(90, 16);
+                pingsPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
+                pingsPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PingsPerSecondString");
+                sonarParamLayout.Controls.Add(pingsPerSecondVLabel, 1, 3);
+
+                // Pulses Per Second VLabel
+                pulsesPerSecondVLabel.Text = "Pulses/Sec: --";
+                pulsesPerSecondVLabel.Size = new System.Drawing.Size(90, 16);
+                pulsesPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
+                pulsesPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PulsesPerSecondString");
+                sonarParamLayout.Controls.Add(pulsesPerSecondVLabel, 1, 4);
+
+                // Depth Filter VLabel
+                depthFilterVLabel.Text = "Depth Filter: --";
+                depthFilterVLabel.Size = new System.Drawing.Size(90, 16);
+                depthFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthFilterVLabel.DataBindings.Add("Text", sonarSettings, "DepthFilter");
+                sonarParamLayout.Controls.Add(depthFilterVLabel, 1, 5);
+
+                // Sample Filter VLabel
+                sampleFilterVLabel.Text = "Sample Filter: --";
+                sampleFilterVLabel.Size = new System.Drawing.Size(90, 16);
+                sampleFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
+                sampleFilterVLabel.DataBindings.Add("Text", sonarSettings, "SampleFilter");
+                sonarParamLayout.Controls.Add(sampleFilterVLabel, 1, 6);
+
+                // Depth Blank VLabel
+                depthBlankVLabel.Text = "Depth Blank: --";
+                depthBlankVLabel.Size = new System.Drawing.Size(90, 16);
+                depthBlankVLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthBlankVLabel.DataBindings.Add("Text", sonarSettings, "DepthBlank");
+                sonarParamLayout.Controls.Add(depthBlankVLabel, 1, 7);
+
+                sonarParamLayout.ResumeLayout(false);
 
                 FlightData.instance.tabActionsSimple.Controls.Add(depthLabel);
                 FlightData.instance.tabActionsSimple.Controls.Add(depthRxLabel);
@@ -575,28 +644,38 @@ namespace cartic
                                 switch (key)
                                 {
                                     case "db":
-                                        sonarSettings.DepthBlank = Convert.ToInt32(value);
+                                        sonarSettings.DepthBlank = Convert.ToInt32(value.TrimEnd('\0'));
                                         break;
                                     case "df":
-                                        sonarSettings.DepthFilter = Convert.ToInt32(value);
+                                        sonarSettings.DepthFilter = Convert.ToInt32(value.TrimEnd('\0'));
                                         break;
                                     case "do":
-                                        sonarSettings.DepthOffset = Convert.ToInt32(value);
+                                        sonarSettings.DepthOffset = Convert.ToInt32(value.TrimEnd('\0'));
                                         break;
                                     case "pm":
-                                        sonarSettings.Ping = value;
+                                        sonarSettings.Ping = value.TrimEnd('\0');
                                         break;
                                     case "pp":
-                                        sonarSettings.PingsPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
+                                        Console.WriteLine(value);
+                                        List<int> pingps = value.TrimEnd('\0').Split(',')
+                                           .Select(s => int.Parse(s.Trim()))
+                                           .ToList();
+                                        sonarSettings.PingsPerSecond = pingps;
+                                        Console.WriteLine(string.Join(",", sonarSettings.PulsesPerSecond));// Adjust this if multiple values are expected
                                         break;
                                     case "pu":
-                                        sonarSettings.PulsesPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
+                                        Console.WriteLine(value);
+                                        List<int> pps = value.TrimEnd('\0').Split(',')
+                                            .Select(s => int.Parse(s.Trim()))
+                                            .ToList();
+                                        sonarSettings.PulsesPerSecond = pps; // Adjust this if multiple values are expected
+                                        Console.WriteLine(string.Join(",", sonarSettings.PulsesPerSecond));
                                         break;
                                     case "rg":
-                                        sonarSettings.Range = value;
+                                        sonarSettings.Range = value.TrimEnd('\0');
                                         break;
                                     case "sf":
-                                        sonarSettings.SampleFilter = Convert.ToInt32(value);
+                                        sonarSettings.SampleFilter = Convert.ToInt32(value.TrimEnd('\0'));
                                         break;
                                         // Add more cases as needed
                                 }
