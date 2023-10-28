@@ -33,7 +33,6 @@ namespace cartic
             // Determine the file name based on the current date and time
             string fileName = $"bathylog-{DateTime.Now:yyyyMMddHHmmss}.csv";
             _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Bathy_Logs", fileName);
-
             // Ensure the directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
 
@@ -120,6 +119,7 @@ namespace cartic
                 {
                     pingsPerSecond = value;
                     OnPropertyChanged("PingsPerSecond");
+                    OnPropertyChanged("PingsPerSecondString");
                 }
             }
         }
@@ -139,10 +139,11 @@ namespace cartic
             get { return pulsesPerSecond; }
             set
             {
-                if (pingsPerSecond != value)
+                if (pulsesPerSecond != value)
                 {
-                    pingsPerSecond = value;
+                    pulsesPerSecond = value;
                     OnPropertyChanged("PulsesPerSecond");
+                    OnPropertyChanged("PulsesPerSecondString");
                 }
             }
         }
@@ -361,7 +362,7 @@ namespace cartic
 
                 sonarParamLayout.Name = "sonarParamLayout";
                 sonarParamLayout.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
-                sonarParamLayout.Size = new System.Drawing.Size (220, 280);
+                sonarParamLayout.Size = new System.Drawing.Size (220, 250);
                 sonarParamLayout.SuspendLayout();
 
                 int numberOfColumns = 3; // For example, set it to 4 columns. Adjust as needed.
@@ -390,7 +391,7 @@ namespace cartic
                 borderContainer.BorderStyle = BorderStyle.FixedSingle;
                 borderContainer.Top = 5;
                 borderContainer.Left = 140;
-                borderContainer.Size = new System.Drawing.Size(220, 280); // Change size as required
+                borderContainer.Size = new System.Drawing.Size(220, 250); // Change size as required
                 FlightData.instance.tabActionsSimple.Controls.Add(borderContainer);
                 borderContainer.Controls.Add(sonarParamLayout);
                 
@@ -447,56 +448,56 @@ namespace cartic
                 /////////// VALUE LABELS
 
                 // Depth Offset Label
-                depthOffsetVLabel.Text = "Depth Offset: --";
-                depthOffsetLabel.Size = new System.Drawing.Size(90, 16);
+                depthOffsetVLabel.Text = "--";
+                depthOffsetVLabel.Size = new System.Drawing.Size(90, 16);
                 depthOffsetVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthOffsetVLabel.DataBindings.Add("Text", sonarSettings, "DepthOffset");
                 sonarParamLayout.Controls.Add(depthOffsetVLabel, 1, 0);
 
                 // Range VLabel
-                rangeVLabel.Text = "Range: --";
+                rangeVLabel.Text = "--";
                 rangeVLabel.Size = new System.Drawing.Size(90, 16);
                 rangeVLabel.Font = new System.Drawing.Font("Arial", 10);
                 rangeVLabel.DataBindings.Add("Text", sonarSettings, "Range");
                 sonarParamLayout.Controls.Add(rangeVLabel, 1, 1);
 
                 // Ping VLabel
-                pingVLabel.Text = "Ping: --";
+                pingVLabel.Text = "--";
                 pingVLabel.Size = new System.Drawing.Size(90, 16);
                 pingVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pingVLabel.DataBindings.Add("Text", sonarSettings, "Ping");
                 sonarParamLayout.Controls.Add(pingVLabel, 1, 2);
 
                 // Pings Per Second VLabel
-                pingsPerSecondVLabel.Text = "Pings/Sec: --";
+                pingsPerSecondVLabel.Text = "--";
                 pingsPerSecondVLabel.Size = new System.Drawing.Size(90, 16);
                 pingsPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pingsPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PingsPerSecondString");
                 sonarParamLayout.Controls.Add(pingsPerSecondVLabel, 1, 3);
 
                 // Pulses Per Second VLabel
-                pulsesPerSecondVLabel.Text = "Pulses/Sec: --";
+                pulsesPerSecondVLabel.Text = "--";
                 pulsesPerSecondVLabel.Size = new System.Drawing.Size(90, 16);
                 pulsesPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pulsesPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PulsesPerSecondString");
                 sonarParamLayout.Controls.Add(pulsesPerSecondVLabel, 1, 4);
 
                 // Depth Filter VLabel
-                depthFilterVLabel.Text = "Depth Filter: --";
+                depthFilterVLabel.Text = "--";
                 depthFilterVLabel.Size = new System.Drawing.Size(90, 16);
                 depthFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthFilterVLabel.DataBindings.Add("Text", sonarSettings, "DepthFilter");
                 sonarParamLayout.Controls.Add(depthFilterVLabel, 1, 5);
 
                 // Sample Filter VLabel
-                sampleFilterVLabel.Text = "Sample Filter: --";
+                sampleFilterVLabel.Text = "--";
                 sampleFilterVLabel.Size = new System.Drawing.Size(90, 16);
                 sampleFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
                 sampleFilterVLabel.DataBindings.Add("Text", sonarSettings, "SampleFilter");
                 sonarParamLayout.Controls.Add(sampleFilterVLabel, 1, 6);
 
                 // Depth Blank VLabel
-                depthBlankVLabel.Text = "Depth Blank: --";
+                depthBlankVLabel.Text = "--";
                 depthBlankVLabel.Size = new System.Drawing.Size(90, 16);
                 depthBlankVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthBlankVLabel.DataBindings.Add("Text", sonarSettings, "DepthBlank");
@@ -656,20 +657,18 @@ namespace cartic
                                         sonarSettings.Ping = value.TrimEnd('\0');
                                         break;
                                     case "pp":
-                                        Console.WriteLine(value);
-                                        List<int> pingps = value.TrimEnd('\0').Split(',')
+                                        string ppValueSantized = value.TrimEnd('\0').TrimStart('[').TrimEnd(']');
+                                        List<int> pingps = ppValueSantized.Split(',')
                                            .Select(s => int.Parse(s.Trim()))
                                            .ToList();
                                         sonarSettings.PingsPerSecond = pingps;
-                                        Console.WriteLine(string.Join(",", sonarSettings.PulsesPerSecond));// Adjust this if multiple values are expected
                                         break;
                                     case "pu":
-                                        Console.WriteLine(value);
-                                        List<int> pps = value.TrimEnd('\0').Split(',')
+                                        string puValueSantized = value.TrimEnd('\0').TrimStart('[').TrimEnd(']');
+                                        List<int> pps = puValueSantized.Split(',')
                                             .Select(s => int.Parse(s.Trim()))
                                             .ToList();
-                                        sonarSettings.PulsesPerSecond = pps; // Adjust this if multiple values are expected
-                                        Console.WriteLine(string.Join(",", sonarSettings.PulsesPerSecond));
+                                        sonarSettings.PulsesPerSecond = pps;
                                         break;
                                     case "rg":
                                         sonarSettings.Range = value.TrimEnd('\0');
