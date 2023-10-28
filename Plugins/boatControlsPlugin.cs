@@ -15,6 +15,7 @@ using MissionPlanner.GCSViews;
 using System.Speech.Synthesis;
 using System.Security.Cryptography.X509Certificates;
 using Accord.Math;
+using System.ComponentModel;
 //loadassembly: MissionPlanner.WebAPIs
 
 namespace cartic
@@ -62,21 +63,135 @@ namespace cartic
         }
     }
 
+    public class SonarSettings : INotifyPropertyChanged
+    {
+        private int? depthOffset;  // DOFFSET
+        private string range;        // RANGE
+        private string ping;         // PING
+        private List<int> pingsPerSecond; // PINGSPS
+        private List<int> pulsesPerSecond; // PULSESPP
+        private int? depthFilter;  // DFILTER
+        private int? sampleFilter; // SFILTER
+        private int? depthBlank;   // DBLANK
+
+        public int? DepthOffset
+        {
+            get { return depthOffset; }
+            set
+            {
+                if (depthOffset != value)
+                {
+                    depthOffset = value;
+                    OnPropertyChanged("DepthOffset");
+                }
+            }
+        }
+
+        public string Range
+        {
+            get { return range; }
+            set
+            {
+                if (range != value)
+                {
+                    range = value;
+                    OnPropertyChanged("Range");
+                }
+            }
+        }
+
+        public string Ping
+        {
+            get { return ping; }
+            set
+            {
+                if (ping != value)
+                {
+                    ping = value;
+                    OnPropertyChanged("Ping");
+                }
+            }
+        }
+
+        public List<int> PingsPerSecond
+        {
+            get { return pingsPerSecond; }
+            set
+            {
+                if (pingsPerSecond != value)
+                {
+                    pingsPerSecond = value;
+                    OnPropertyChanged("PingsPerSecond");
+                }
+            }
+        }
+
+        public List<int> PulsesPerSecond
+        {
+            get { return pulsesPerSecond; }
+            set
+            {
+                if (pingsPerSecond != value)
+                {
+                    pingsPerSecond = value;
+                    OnPropertyChanged("PulsesPerSecond");
+                }
+            }
+        }
+
+        public int? DepthFilter
+        {
+            get { return depthFilter; }
+            set
+            {
+                if (depthFilter != value)
+                {
+                    depthFilter = value;
+                    OnPropertyChanged("DepthFilter");
+                }
+            }
+        }
+        public int? SampleFilter
+        {
+            get { return sampleFilter; }
+            set
+            {
+                if (sampleFilter != value)
+                {
+                    sampleFilter = value;
+                    OnPropertyChanged("SampleFilter");
+                }
+            }
+        }
+
+        public int? DepthBlank
+        {
+            get { return depthBlank; }
+            set
+            {
+                if (depthBlank != value)
+                {
+                    depthBlank = value;
+                    OnPropertyChanged("DepthBlank");
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
     public class BoatControlsPlugin : MissionPlanner.Plugin.Plugin
     {
         private int _depthRx = 0;
         private bool _recording = false;
         private string _logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bathy_Logs");
         private BathyLogger fileLogger = null;
-
-        private int? depthOffset;  // DOFFSET
-        private string range;        // RANGE
-        private string ping;         // PING
-        private List<int> pingsPerSecond; // PINGSPS
-        private List<int> pulsesPerSecond; // PULSESPP
-        private double? depthFilter;  // DFILTER
-        private double? sampleFilter; // SFILTER
-        private double? depthBlank;   // DBLANK
+        private SonarSettings sonarSettings = new SonarSettings();
 
         private Control recButton = new MissionPlanner.Controls.MyButton();
         private Control showLogsButton = new MissionPlanner.Controls.MyButton();
@@ -143,53 +258,6 @@ namespace cartic
             }
         }
 
-        public double? DepthOffset
-        {
-            get { return depthOffset; }
-            set { depthOffset = value; }
-        }
-
-        public string Range
-        {
-            get { return range; }
-            set { range = value; }
-        }
-
-        public string Ping
-        {
-            get { return ping; }
-            set { ping = value; }
-        }
-
-        public List<int> PingsPerSecond
-        {
-            get { return pingsPerSecond; }
-            set { pingsPerSecond = value; }
-        }
-
-        public List<int> PulsesPerSecond
-        {
-            get { return pulsesPerSecond; }
-            set { pulsesPerSecond = value; }
-        }
-
-        public double? DepthFilter
-        {
-            get { return depthFilter; }
-            set { depthFilter = value; }
-        }
-        public double? SampleFilter
-        {
-            get { return sampleFilter; }
-            set { sampleFilter = value; }
-        }
-
-        public double? DepthBlank
-        {
-            get { return depthBlank; }
-            set { depthBlank = value; }
-        }
-
         public override bool Init()
         {
             Host.FDMenuHud.BeginInvokeIfRequired(() =>
@@ -241,20 +309,20 @@ namespace cartic
                 Control[] btn1 = FlightData.instance.tabActionsSimple.Controls.Find("myButton1", false);
                 if (btn1 != null)
                 {
-                    btn1[0].Left = 310;
+                    FlightData.instance.tabActionsSimple.Controls.Remove(btn1[0]);
                 }
 
                 Control[] btn2 = FlightData.instance.tabActionsSimple.Controls.Find("myButton2", false);
                 if (btn2 != null)
                 {
-                    btn2[0].Left = 310;
+                    FlightData.instance.tabActionsSimple.Controls.Remove(btn2[0]);
                 }
 
 
                 Control[] btn3 = FlightData.instance.tabActionsSimple.Controls.Find("myButton3", false);
                 if(btn3 != null)
                 {
-                    btn3[0].Left = 310;
+                    FlightData.instance.tabActionsSimple.Controls.Remove(btn3[0]);
                 }
 
 
@@ -279,6 +347,7 @@ namespace cartic
                 depthOffsetLabel.Anchor = AnchorStyles.Left;
                 depthOffsetLabel.Size = new System.Drawing.Size(90, 30);
                 depthOffsetLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthOffsetLabel.DataBindings.Add("Text", sonarSettings, "DepthOffset");
                 borderContainer.Controls.Add(depthOffsetLabel);
                 topPosition += increment;
 
@@ -290,6 +359,7 @@ namespace cartic
                 rangeLabel.Anchor = AnchorStyles.Left;
                 rangeLabel.Size = new System.Drawing.Size(90, 30);
                 rangeLabel.Font = new System.Drawing.Font("Arial", 10);
+                rangeLabel.DataBindings.Add("Text", sonarSettings, "Range");
                 borderContainer.Controls.Add(rangeLabel);
                 topPosition += increment;
 
@@ -301,6 +371,7 @@ namespace cartic
                 pingLabel.Anchor = AnchorStyles.Left;
                 pingLabel.Size = new System.Drawing.Size(90, 30);
                 pingLabel.Font = new System.Drawing.Font("Arial", 10);
+                pingLabel.DataBindings.Add("Text", sonarSettings, "Ping");
                 borderContainer.Controls.Add(pingLabel);
                 topPosition += increment;
 
@@ -312,6 +383,7 @@ namespace cartic
                 pingsPerSecondLabel.Anchor = AnchorStyles.Left;
                 pingsPerSecondLabel.Size = new System.Drawing.Size(90, 30);
                 pingsPerSecondLabel.Font = new System.Drawing.Font("Arial", 10);
+                pingsPerSecondLabel.DataBindings.Add("Text", sonarSettings, "PingsPerSecond");
                 borderContainer.Controls.Add(pingsPerSecondLabel);
                 topPosition += increment;
 
@@ -323,6 +395,7 @@ namespace cartic
                 pulsesPerSecondLabel.Anchor = AnchorStyles.Left;
                 pulsesPerSecondLabel.Size = new System.Drawing.Size(90, 30);
                 pulsesPerSecondLabel.Font = new System.Drawing.Font("Arial", 10);
+                pulsesPerSecondLabel.DataBindings.Add("Text", sonarSettings, "PulsesPerSecond");
                 borderContainer.Controls.Add(pulsesPerSecondLabel);
                 topPosition += increment;
 
@@ -334,6 +407,7 @@ namespace cartic
                 depthFilterLabel.Anchor = AnchorStyles.Left;
                 depthFilterLabel.Size = new System.Drawing.Size(90, 30);
                 depthFilterLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthFilterLabel.DataBindings.Add("Text", sonarSettings, "DepthFilter");
                 borderContainer.Controls.Add(depthFilterLabel);
                 topPosition += increment;
 
@@ -345,6 +419,7 @@ namespace cartic
                 sampleFilterLabel.Anchor = AnchorStyles.Left;
                 sampleFilterLabel.Size = new System.Drawing.Size(90, 30);
                 sampleFilterLabel.Font = new System.Drawing.Font("Arial", 10);
+                sampleFilterLabel.DataBindings.Add("Text", sonarSettings, "SampleFilter");
                 borderContainer.Controls.Add(sampleFilterLabel);
                 topPosition += increment;
 
@@ -356,6 +431,7 @@ namespace cartic
                 depthBlankLabel.Anchor = AnchorStyles.Left;
                 depthBlankLabel.Size = new System.Drawing.Size(90, 30);
                 depthBlankLabel.Font = new System.Drawing.Font("Arial", 10);
+                depthBlankLabel.DataBindings.Add("Text", sonarSettings, "DepthBlank");
                 borderContainer.Controls.Add(depthBlankLabel);
                 topPosition += increment;
 
@@ -499,28 +575,28 @@ namespace cartic
                                 switch (key)
                                 {
                                     case "db":
-                                        DepthBlank = Convert.ToDouble(value);
+                                        sonarSettings.DepthBlank = Convert.ToInt32(value);
                                         break;
                                     case "df":
-                                        DepthFilter = Convert.ToDouble(value);
+                                        sonarSettings.DepthFilter = Convert.ToInt32(value);
                                         break;
                                     case "do":
-                                        DepthOffset = Convert.ToDouble(value);
+                                        sonarSettings.DepthOffset = Convert.ToInt32(value);
                                         break;
                                     case "pm":
-                                        Ping = value;
+                                        sonarSettings.Ping = value;
                                         break;
                                     case "pp":
-                                        PingsPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
+                                        sonarSettings.PingsPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
                                         break;
                                     case "pu":
-                                        PulsesPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
+                                        sonarSettings.PulsesPerSecond = new List<int> { Convert.ToInt32(value) }; // Adjust this if multiple values are expected
                                         break;
                                     case "rg":
-                                        Range = value;
+                                        sonarSettings.Range = value;
                                         break;
                                     case "sf":
-                                        SampleFilter = Convert.ToDouble(value);
+                                        sonarSettings.SampleFilter = Convert.ToInt32(value);
                                         break;
                                         // Add more cases as needed
                                 }
