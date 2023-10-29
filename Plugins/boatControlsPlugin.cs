@@ -14,19 +14,16 @@ using MissionPlanner.Controls;
 using MissionPlanner.GCSViews;
 using System.Speech.Synthesis;
 using System.Security.Cryptography.X509Certificates;
-using Accord.Math;
 using System.ComponentModel;
-using Org.BouncyCastle.Asn1.Crmf;
 //loadassembly: MissionPlanner.WebAPIs
 
 namespace cartic
 {
+
     public class BathyLogger : IDisposable
     {
         private readonly string _filePath;
         private StreamWriter _streamWriter;  // Class-level StreamWriter
-
-
 
         public BathyLogger()
         {
@@ -207,6 +204,97 @@ namespace cartic
         }
     }
 
+    public class SonarButton : MyButton
+    {
+        private readonly Action<string> externalFunction;
+        public SonarButton(string buttonName, Action<string> functionToCall)
+        {
+            this.Name = buttonName;
+            this.Text = "Set";
+            this.Size = new System.Drawing.Size(35, 25); 
+            this.Padding = new Padding(3);
+
+            // Attach the custom OnClick event handler
+
+            // Assign the external function to the local delegate
+            this.externalFunction = functionToCall;
+
+            // Attach the custom OnClick event handler
+            this.Click += SonarButton_Click;
+        }
+
+        private void SonarButton_Click(object sender, EventArgs e)
+        {
+            // Call the custom function here
+            externalFunction?.Invoke(this.Name);
+        }
+    }
+
+    public class SonarSetDialog : Form
+    {
+        private Label lblInput;
+        private TextBox txtInput;
+        private Button btnAccept;
+        private Button btnCancel;
+
+        public string InputValue => txtInput.Text;
+
+        private readonly Action<string> externalFunction;
+
+        public SonarSetDialog(string Command, Action<string> ActionToCall)
+        {
+            this.Name = Command;
+            this.externalFunction = ActionToCall;
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            lblInput = new Label();
+            txtInput = new TextBox();
+            btnAccept = new Button();
+            btnCancel = new Button();
+
+            string cmdType = BoatControlsPlugin.GetReadableSonarPropertyName(this.Name.RemoveFromEnd("Set"));
+
+            lblInput.Text = $"Enter a new value for {cmdType}:";
+            lblInput.Location = new System.Drawing.Point(10, 10);
+            lblInput.AutoSize = true;
+
+            txtInput.Location = new System.Drawing.Point(10, 40);
+            txtInput.Width = 300;
+
+            btnAccept.Text = "Accept";
+            btnAccept.Location = new System.Drawing.Point(10, 70);
+            btnAccept.Click += BtnAccept_Click;
+
+            btnCancel.Text = "Cancel";
+            btnCancel.Location = new System.Drawing.Point(120, 70);
+            btnCancel.Click += BtnCancel_Click;
+
+            this.Controls.Add(lblInput);
+            this.Controls.Add(txtInput);
+            this.Controls.Add(btnAccept);
+            this.Controls.Add(btnCancel);
+
+            this.Text = $"Set {cmdType} for the Sonar";
+            this.Size = new System.Drawing.Size(350, 150);
+        }
+
+        private void BtnAccept_Click(object sender, EventArgs e)
+        {
+            // You can handle the Accept logic here, like raising an event or setting a property
+            externalFunction?.Invoke($"{this.Name}:{txtInput.Text.TrimEnd()}");
+            this.Close();
+        }
+
+        private void BtnCancel_Click(object sender, EventArgs e)
+        {
+            // Handle the Cancel logic
+            this.Close();
+        }
+    }
+
     public class BoatControlsPlugin : MissionPlanner.Plugin.Plugin
     {
         private int _depthRx = 0;
@@ -215,7 +303,13 @@ namespace cartic
         private BathyLogger fileLogger = null;
         private SonarSettings sonarSettings = new SonarSettings();
 
+        private string LeftLED0 = "000000";
+        private string LeftLED1 = "000000";
+        private string RightLED0 = "000000";
+        private string RightLED1 = "000000";
+
         private TableLayoutPanel sonarParamLayout = new System.Windows.Forms.TableLayoutPanel();
+        private SonarSetDialog sonarSetDialog;
 
         private Control recButton = new MissionPlanner.Controls.MyButton();
         private Control showLogsButton = new MissionPlanner.Controls.MyButton();
@@ -243,6 +337,15 @@ namespace cartic
         private Control sampleFilterLabel = new MissionPlanner.Controls.MyLabel();
         private Control depthBlankLabel = new MissionPlanner.Controls.MyLabel();
 
+        private Control depthOffsetButton;
+        private Control rangeButton;
+        private Control pingButton;
+        private Control pingsPerSecondButton;
+        private Control pulsesPerSecondButton;
+        private Control depthFilterButton;
+        private Control sampleFilterButton;
+        private Control depthBlankButton;
+
         public event EventHandler DepthRecieved;
         public event EventHandler RecordingChanged;
 
@@ -260,6 +363,62 @@ namespace cartic
         {
             get { return "J Piper-Green"; }
         }
+
+        //STATIC FUNCTIONS
+
+        public static string GetReadableSonarPropertyName(string code)
+        {
+            switch (code)
+            {
+                case "do":
+                    return "Depth Offset";
+                case "rg":
+                    return "Range";
+                case "pm":
+                    return "Ping Mode";
+                case "pp":
+                    return "Pings Per Second";
+                case "pu":
+                    return "Pulses Per Second";
+                case "df":
+                    return "Depth Filter";
+                case "sf":
+                    return "Sample Filter";
+                case "db":
+                    return "Depth Blank";
+                default:
+                    return "Unknown Property";
+            }
+        }
+
+        public static string ExecuteCommand(string command)
+        {
+            Process process = new Process();
+
+            process.StartInfo.FileName = "cmd.exe";
+            process.StartInfo.Arguments = $"/C {command}";
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+
+            process.Start();
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.Kill();
+
+            return output;
+        }
+
+        public static string ControlRGB(string LeftLED0, string LeftLED1, string RightLED0, string RightLED1)
+        {
+            if (Directory.Exists("C:\\OpenRGB\\"))
+            {
+                return ExecuteCommand($"C:\\OpenRGB\\OpenRGB.exe --noautoconnect -d 0 -c {LeftLED0},{LeftLED1},{RightLED0},{RightLED1} -b 100");
+            }
+            return "OpenRGB Does not exist at C:/OpenRGB/";
+        }
+
+        //VIRTUAL FUNCTIONS
 
         protected virtual void OnDepthRecieved(EventArgs e)
         {
@@ -341,7 +500,17 @@ namespace cartic
                 recStateLabel.ForeColor = System.Drawing.Color.Black;
                 recStateLabel.Font = new System.Drawing.Font("Arial", 36);
 
-                Control[] btn1 = FlightData.instance.tabActionsSimple.Controls.Find("myButton1", false);
+                depthOffsetButton = new SonarButton("doSet", SetSonarParam);
+                rangeButton = new SonarButton("rgSet", SetSonarParam);
+                pingButton = new SonarButton("pmSet", SetSonarParam);
+                pingsPerSecondButton = new SonarButton("ppSet", SetSonarParam);
+                pulsesPerSecondButton = new SonarButton("puSet", SetSonarParam);
+                depthFilterButton = new SonarButton("dfSet", SetSonarParam);
+                sampleFilterButton = new SonarButton("sfSet", SetSonarParam);
+                depthBlankButton = new SonarButton("dbSet", SetSonarParam);
+
+        //Remove default buttons for the simpleActionTab
+        Control[] btn1 = FlightData.instance.tabActionsSimple.Controls.Find("myButton1", false);
                 if (btn1 != null)
                 {
                     FlightData.instance.tabActionsSimple.Controls.Remove(btn1[0]);
@@ -362,7 +531,7 @@ namespace cartic
 
                 sonarParamLayout.Name = "sonarParamLayout";
                 sonarParamLayout.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
-                sonarParamLayout.Size = new System.Drawing.Size (220, 250);
+                sonarParamLayout.Size = new System.Drawing.Size (225, 250);
                 sonarParamLayout.SuspendLayout();
 
                 int numberOfColumns = 3; // For example, set it to 4 columns. Adjust as needed.
@@ -373,8 +542,8 @@ namespace cartic
                 for (int i = 0; i < numberOfColumns; i++)
                 {
                     if (i == 0) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F)); }
-                    if (i == 1) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F)); }
-                    if (i == 2) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F)); }
+                    if (i == 1) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F)); }
+                    if (i == 2) { sonarParamLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15F)); }
                 }
 
                 int numberOfRows = 8; // For example, set it to 4 columns. Adjust as needed.
@@ -390,8 +559,8 @@ namespace cartic
                 Panel borderContainer = new Panel();
                 borderContainer.BorderStyle = BorderStyle.FixedSingle;
                 borderContainer.Top = 5;
-                borderContainer.Left = 140;
-                borderContainer.Size = new System.Drawing.Size(220, 250); // Change size as required
+                borderContainer.Left = 135;
+                borderContainer.Size = new System.Drawing.Size(225, 250); // Change size as required
                 FlightData.instance.tabActionsSimple.Controls.Add(borderContainer);
                 borderContainer.Controls.Add(sonarParamLayout);
                 
@@ -453,6 +622,7 @@ namespace cartic
                 depthOffsetVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthOffsetVLabel.DataBindings.Add("Text", sonarSettings, "DepthOffset");
                 sonarParamLayout.Controls.Add(depthOffsetVLabel, 1, 0);
+                sonarParamLayout.Controls.Add(depthOffsetButton, 2, 0);
 
                 // Range VLabel
                 rangeVLabel.Text = "--";
@@ -460,6 +630,7 @@ namespace cartic
                 rangeVLabel.Font = new System.Drawing.Font("Arial", 10);
                 rangeVLabel.DataBindings.Add("Text", sonarSettings, "Range");
                 sonarParamLayout.Controls.Add(rangeVLabel, 1, 1);
+                sonarParamLayout.Controls.Add(rangeButton, 2,  1);
 
                 // Ping VLabel
                 pingVLabel.Text = "--";
@@ -467,6 +638,7 @@ namespace cartic
                 pingVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pingVLabel.DataBindings.Add("Text", sonarSettings, "Ping");
                 sonarParamLayout.Controls.Add(pingVLabel, 1, 2);
+                sonarParamLayout.Controls.Add(pingButton, 2, 2);
 
                 // Pings Per Second VLabel
                 pingsPerSecondVLabel.Text = "--";
@@ -474,6 +646,7 @@ namespace cartic
                 pingsPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pingsPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PingsPerSecondString");
                 sonarParamLayout.Controls.Add(pingsPerSecondVLabel, 1, 3);
+                sonarParamLayout.Controls.Add(pingsPerSecondButton, 2, 3);
 
                 // Pulses Per Second VLabel
                 pulsesPerSecondVLabel.Text = "--";
@@ -481,6 +654,7 @@ namespace cartic
                 pulsesPerSecondVLabel.Font = new System.Drawing.Font("Arial", 10);
                 pulsesPerSecondVLabel.DataBindings.Add("Text", sonarSettings, "PulsesPerSecondString");
                 sonarParamLayout.Controls.Add(pulsesPerSecondVLabel, 1, 4);
+                sonarParamLayout.Controls.Add(pulsesPerSecondButton, 2, 4);
 
                 // Depth Filter VLabel
                 depthFilterVLabel.Text = "--";
@@ -488,6 +662,7 @@ namespace cartic
                 depthFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthFilterVLabel.DataBindings.Add("Text", sonarSettings, "DepthFilter");
                 sonarParamLayout.Controls.Add(depthFilterVLabel, 1, 5);
+                sonarParamLayout.Controls.Add(depthFilterButton, 2, 5);
 
                 // Sample Filter VLabel
                 sampleFilterVLabel.Text = "--";
@@ -495,6 +670,7 @@ namespace cartic
                 sampleFilterVLabel.Font = new System.Drawing.Font("Arial", 10);
                 sampleFilterVLabel.DataBindings.Add("Text", sonarSettings, "SampleFilter");
                 sonarParamLayout.Controls.Add(sampleFilterVLabel, 1, 6);
+                sonarParamLayout.Controls.Add(sampleFilterButton, 2, 6);
 
                 // Depth Blank VLabel
                 depthBlankVLabel.Text = "--";
@@ -502,6 +678,7 @@ namespace cartic
                 depthBlankVLabel.Font = new System.Drawing.Font("Arial", 10);
                 depthBlankVLabel.DataBindings.Add("Text", sonarSettings, "DepthBlank");
                 sonarParamLayout.Controls.Add(depthBlankVLabel, 1, 7);
+                sonarParamLayout.Controls.Add(depthBlankButton, 2, 7);
 
                 sonarParamLayout.ResumeLayout(false);
 
@@ -520,15 +697,15 @@ namespace cartic
 
         public override bool Loaded()
         {
-            loopratehz = 1.0f;
+            loopratehz = 0.5f;
             recStateLabel.ForeColor = System.Drawing.Color.Black;
 
             return true;
         }
 
-
         public override bool Loop()
         {
+            ControlRGB(this.LeftLED0, this.LeftLED1, this.RightLED0, this.RightLED1);
             return true;
         }
 
@@ -572,6 +749,12 @@ namespace cartic
                     fileLogger = null;
                 }
             }
+        }
+
+        public void SetSonarParam(string Param)
+        {
+            sonarSetDialog = new SonarSetDialog(Param, SendMessage);
+            sonarSetDialog.Show();
         }
 
         private void ShowLogsClick(Object sender, EventArgs e)
@@ -622,7 +805,9 @@ namespace cartic
                     depthRxLabel.Invoke(new Action(() => { depthRxLabel.Text = $"Rx: {(DepthRx).ToString()}"; }));
                     depthLabel.Invoke(new Action(() => { depthLabel.Text = $"{(depth.distance / 100).ToString()} m"; }));
                     recButton.Invoke(new Action(() => { recButton.Text = Recording ? "End Recording" : "Start Recording Soundings"; }));
-                    recStateLabel.Invoke(new Action(() => { recStateLabel.ForeColor = Recording ? System.Drawing.Color.Red : System.Drawing.Color.Black; }));;
+                    recStateLabel.Invoke(new Action(() => { recStateLabel.ForeColor = Recording ? System.Drawing.Color.Red : System.Drawing.Color.Black; }));
+                    this.LeftLED0 = Recording ? "FF0000" : this.LeftLED0;
+                    this.LeftLED1 = Recording ? "FF0000" : this.LeftLED1;
                     if (fileLogger != null)
                     {
                         fileLogger.WriteLine(Host.cs.datetime.toUnixTimeDouble(), Host.cs.lat, Host.cs.lng, depth.distance / 100, Host.cs.gpsstatus, Host.cs.altasl);
@@ -639,42 +824,42 @@ namespace cartic
                         string[] parts = statusText.Split(':');
                         string key = parts[0];
                         if (parts.Length > 1) { 
-                            string value = parts[1];
+                            string value = parts[1].TrimEnd('\0');
                             if (!string.IsNullOrEmpty(value))
                             {
                                 switch (key)
                                 {
                                     case "db":
-                                        sonarSettings.DepthBlank = Convert.ToInt32(value.TrimEnd('\0'));
+                                        sonarSettings.DepthBlank = Convert.ToInt32(value);
                                         break;
                                     case "df":
-                                        sonarSettings.DepthFilter = Convert.ToInt32(value.TrimEnd('\0'));
+                                        sonarSettings.DepthFilter = Convert.ToInt32(value);
                                         break;
                                     case "do":
-                                        sonarSettings.DepthOffset = Convert.ToInt32(value.TrimEnd('\0'));
+                                        sonarSettings.DepthOffset = Convert.ToInt32(value);
                                         break;
                                     case "pm":
-                                        sonarSettings.Ping = value.TrimEnd('\0');
+                                        sonarSettings.Ping = value;
                                         break;
                                     case "pp":
-                                        string ppValueSantized = value.TrimEnd('\0').TrimStart('[').TrimEnd(']');
+                                        string ppValueSantized = value.TrimStart('[').TrimEnd(']');
                                         List<int> pingps = ppValueSantized.Split(',')
                                            .Select(s => int.Parse(s.Trim()))
                                            .ToList();
                                         sonarSettings.PingsPerSecond = pingps;
                                         break;
                                     case "pu":
-                                        string puValueSantized = value.TrimEnd('\0').TrimStart('[').TrimEnd(']');
+                                        string puValueSantized = value.TrimStart('[').TrimEnd(']');
                                         List<int> pps = puValueSantized.Split(',')
                                             .Select(s => int.Parse(s.Trim()))
                                             .ToList();
                                         sonarSettings.PulsesPerSecond = pps;
                                         break;
                                     case "rg":
-                                        sonarSettings.Range = value.TrimEnd('\0');
+                                        sonarSettings.Range = value;
                                         break;
                                     case "sf":
-                                        sonarSettings.SampleFilter = Convert.ToInt32(value.TrimEnd('\0'));
+                                        sonarSettings.SampleFilter = Convert.ToInt32(value);
                                         break;
                                         // Add more cases as needed
                                 }
