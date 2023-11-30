@@ -54,6 +54,7 @@
     <Prefer32Bit>false</Prefer32Bit>
     <CodeAnalysisRuleSet>
     </CodeAnalysisRuleSet>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
   </PropertyGroup>
   <PropertyGroup>
     <RootNamespace>MissionPlanner</RootNamespace>
@@ -350,6 +351,9 @@
     <Reference Include="BitMiracle.LibTiff.NetStandard">
       <HintPath>.\extlibs\BitMiracle.LibTiff.NetStandard.dll</HintPath>
       <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenRGB.NET">
+      <HintPath>..\..\Users\Jonathan\Downloads\OpenRGB.NET-1.7.0\OpenRGB.NET-1.7.0\OpenRGB.NET\bin\Release\netstandard2.0\OpenRGB.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -969,9 +973,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>UserControl</SubType>
     </None>
-    <Compile Include="plugins\boatControlsPlugin.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
     <None Include="plugins\example2.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

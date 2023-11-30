@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ExtLibs\Controls\MissionPlanner.Controls.csproj" />
+    <ProjectReference Include="..\..\ExtLibs\Mavlink\MAVLink.csproj" />
+    <ProjectReference Include="..\..\ExtLibs\MissionPlanner.Drawing\MissionPlanner.Drawing.csproj" />
+    <ProjectReference Include="..\..\ExtLibs\Utilities\MissionPlanner.Utilities.csproj" />
+    <ProjectReference Include="..\..\MissionPlanner.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="OpenRGB.NET">
+      <HintPath>..\..\..\..\Users\Jonathan\Downloads\OpenRGB.NET-1.7.0\OpenRGB.NET-1.7.0\OpenRGB.NET\bin\Release\netstandard2.0\OpenRGB.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;C:\MP\Cartic-MissionPlanner\Plugins&quot; /Y&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;C:\MP\Cartic-MissionPlanner\bin\Debug\net461\plugins&quot; /Y&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;C:\MP\Cartic-MissionPlanner\bin\Release\net461\plugins&quot; /Y&#xD;&#xA;" />
+  </Target>
+
+</Project>
